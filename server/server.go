@@ -14,17 +14,6 @@ import (
 
 func InitializeServer() string {
 
-	db, err := sql.Open("sqlite3", "./mybanco.db")
-	if err != nil {
-		panic(err)
-	}
-	defer db.Close()
-
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS cotacao (id INTEGER PRIMARY KEY, bid TEXT)")
-	if err != nil {
-		panic(err)
-	}
-
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/cotacao", func(w http.ResponseWriter, r *http.Request) {
@@ -35,11 +24,7 @@ func InitializeServer() string {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		err = InsertCotacao(db, cotacao)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+
 		response := models.Cotacao{
 			Bid: cotacao,
 		}
@@ -86,6 +71,6 @@ func InsertCotacao(db *sql.DB, cotacao string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Cotacao inserida com sucesso")
+	fmt.Println("Cotação inserida com sucesso")
 	return nil
 }

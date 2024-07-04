@@ -7,10 +7,15 @@ import (
 	"os"
 	"time"
 
+	"github.com/willyfvn/dolar-challenge.git/db"
 	"github.com/willyfvn/dolar-challenge.git/models"
 )
 
 func FetchCotacao() string {
+
+	mydb := db.StartDb()
+	defer mydb.Close()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
 	defer cancel()
 
@@ -32,6 +37,8 @@ func FetchCotacao() string {
 	if err != nil {
 		return err.Error()
 	}
+
+	db.InsertCotacao(mydb, cotacao.Bid)
 
 	err = saveCotacao(&cotacao)
 	if err != nil {
