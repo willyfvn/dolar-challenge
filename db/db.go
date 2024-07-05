@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 )
@@ -20,11 +21,13 @@ func StartDb() *sql.DB {
 	return db
 }
 
-func InsertCotacao(db *sql.DB, cotacao string) error {
-	_, err := db.Exec("INSERT INTO cotacao (bid) VALUES (?)", cotacao)
+func InsertCotacao(ctx context.Context, db *sql.DB, cotacao string) error {
+
+	_, err := db.ExecContext(ctx, "INSERT INTO cotacao (bid) VALUES (?)", cotacao)
 	if err != nil {
 		return err
 	}
 	fmt.Println("Cotação inserida com sucesso")
 	return nil
+
 }

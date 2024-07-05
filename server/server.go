@@ -17,9 +17,9 @@ func InitializeServer() string {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/cotacao", func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), 200*time.Millisecond)
+		requestCtx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
-		cotacao, err := getCotacao(ctx)
+		cotacao, err := getCotacao(requestCtx)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -39,6 +39,7 @@ func InitializeServer() string {
 }
 
 func getCotacao(ctx context.Context) (string, error) {
+
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://economia.awesomeapi.com.br/json/last/USD-BRL", nil)
 	if err != nil {
 		return "", nil

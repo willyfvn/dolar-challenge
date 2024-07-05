@@ -16,10 +16,13 @@ func FetchCotacao() string {
 	mydb := db.StartDb()
 	defer mydb.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	requestCtx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancel()
+	//com 10ms de timeout, o teste falha
+	dbCtx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "GET", "http://localhost:8080/cotacao", nil)
+	req, err := http.NewRequestWithContext(requestCtx, "GET", "http://localhost:8080/cotacao", nil)
 	if err != nil {
 		return err.Error()
 	}
@@ -38,7 +41,10 @@ func FetchCotacao() string {
 		return err.Error()
 	}
 
-	db.InsertCotacao(mydb, cotacao.Bid)
+	err = db.InsertCotacao(dbCtx, mydb, cotacao.Bid)
+	if err != nil {
+		return err.Error()
+	}
 
 	err = saveCotacao(&cotacao)
 	if err != nil {
