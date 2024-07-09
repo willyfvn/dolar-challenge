@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/willyfvn/dolar-challenge.git/db"
 	"github.com/willyfvn/dolar-challenge.git/models"
 )
 
@@ -17,11 +19,23 @@ func InitializeServer() string {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/cotacao", func(w http.ResponseWriter, r *http.Request) {
+		mydb := db.StartDb()
+		defer mydb.Close()
+
 		requestCtx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
+
+		dbCtx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
+
 		cotacao, err := getCotacao(requestCtx)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusRequestTimeout)
+			return
+		}
+		err = InsertCotacao(mydb, cotacao, dbCtx)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusRequestTimeout)
 			return
 		}
 
@@ -42,34 +56,42 @@ func getCotacao(ctx context.Context) (string, error) {
 
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://economia.awesomeapi.com.br/json/last/USD-BRL", nil)
 	if err != nil {
-		return "", nil
+
+		return "", err
 	}
+	fmt.Println("Request created")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", nil
+		log.Println("error making request:")
+		log.Println(err)
+		return "", err
 	}
-
 	defer resp.Body.Close()
+
+	fmt.Println("Response received")
 
 	var result map[string]map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", nil
+		return "", fmt.Errorf("error decoding response: %v", err)
 	}
-
 	usdbid, ok := result["USDBRL"]["bid"].(string)
 	if !ok {
-		return "", nil
+		return "", fmt.Errorf("bid not found")
 	}
+	fmt.Println(usdbid)
 
 	return usdbid, nil
 
 }
 
-func InsertCotacao(db *sql.DB, cotacao string) error {
-	_, err := db.Exec("INSERT INTO cotacao (bid) VALUES (?)", cotacao)
+func InsertCotacao(db *sql.DB, cotacao string, ctx context.Context) error {
+	_, err := db.ExecContext(ctx, "INSERT INTO cotacao (bid) VALUES (?)", cotacao)
+
 	if err != nil {
+		log.Println("error inserting cotacao:")
+		log.Println(err)
 		return err
 	}
 	fmt.Println("Cotação inserida com sucesso")

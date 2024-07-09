@@ -7,19 +7,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/willyfvn/dolar-challenge.git/db"
 	"github.com/willyfvn/dolar-challenge.git/models"
 )
 
 func FetchCotacao() string {
 
-	mydb := db.StartDb()
-	defer mydb.Close()
-
 	requestCtx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
-	defer cancel()
-	//com 10ms de timeout, o teste falha
-	dbCtx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(requestCtx, "GET", "http://localhost:8080/cotacao", nil)
@@ -37,11 +30,6 @@ func FetchCotacao() string {
 
 	cotacao := models.Cotacao{}
 	err = json.NewDecoder(resp.Body).Decode(&cotacao)
-	if err != nil {
-		return err.Error()
-	}
-
-	err = db.InsertCotacao(dbCtx, mydb, cotacao.Bid)
 	if err != nil {
 		return err.Error()
 	}
