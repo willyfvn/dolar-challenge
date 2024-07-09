@@ -18,20 +18,22 @@ func InitializeServer() string {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/cotacao", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/cotacao", func(w http.ResponseWriter, req *http.Request) {
 		mydb := db.StartDb()
 		defer mydb.Close()
 
 		requestCtx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 		defer cancel()
 
-		dbCtx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		dbCtx, cancel := context.WithTimeout(context.Background(), 2*time.Millisecond)
 		defer cancel()
 
 		cotacao, err := getCotacao(requestCtx)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusRequestTimeout)
+			fmt.Println(err)
 			return
+
 		}
 		err = InsertCotacao(mydb, cotacao, dbCtx)
 		if err != nil {
@@ -42,8 +44,11 @@ func InitializeServer() string {
 		response := models.Cotacao{
 			Bid: cotacao,
 		}
+		if response.Bid == "" {
+			http.Error(w, "bid not found", http.StatusNotFound)
+			return
+		}
 
-		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(response)
 	})
 
@@ -56,21 +61,15 @@ func getCotacao(ctx context.Context) (string, error) {
 
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://economia.awesomeapi.com.br/json/last/USD-BRL", nil)
 	if err != nil {
-
 		return "", err
 	}
-	fmt.Println("Request created")
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println("error making request:")
-		log.Println(err)
 		return "", err
 	}
 	defer resp.Body.Close()
-
-	fmt.Println("Response received")
 
 	var result map[string]map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
@@ -82,7 +81,7 @@ func getCotacao(ctx context.Context) (string, error) {
 	}
 	fmt.Println(usdbid)
 
-	return usdbid, nil
+	return "usdbid", nil
 
 }
 

@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -25,8 +26,11 @@ func FetchCotacao() string {
 	if err != nil {
 		return err.Error()
 	}
-
 	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Sprintf("Error creating request: %s", resp.Status)
+	}
 
 	cotacao := models.Cotacao{}
 	err = json.NewDecoder(resp.Body).Decode(&cotacao)
@@ -36,7 +40,7 @@ func FetchCotacao() string {
 
 	err = saveCotacao(&cotacao)
 	if err != nil {
-		return err.Error()
+		return fmt.Sprintf("4 Error creating request: %s", err)
 	}
 
 	return "Cotação salva com sucesso"
